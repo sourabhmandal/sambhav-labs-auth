@@ -5,29 +5,50 @@ x-zitadel-db-env: &zitadel-db-env
 
 services:
   proxy:
-    image: ${TRAEFIK_IMAGE}
+    image: traefik:latest
+    pull_policy: always
+    container_name: traefik-for-zitadel
     restart: unless-stopped
     command:
+      - --log.level=${TRAEFIK_LOG_LEVEL:-DEBUG}
+      - --accesslog=${TRAEFIK_ACCESSLOG_ENABLED:-true}
+      - --api.insecure=true
+      - --api.dashboard=true
+      - --ping=true
+      - --ping.entrypoint=web
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --providers.docker.network=zitadel
       - --entrypoints.web.address=:80
-      - --entrypoints.web.http.redirections.entrypoint.to=websecure
-      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      - --entrypoints.web.http.redirections.entryPoint.scheme=https
+      - --entrypoints.web.http.redirections.entryPoint.permanent=true
       - --entrypoints.websecure.address=:443
       - --entrypoints.websecure.http.tls=true
-      - --api.dashboard=${TRAEFIK_DASHBOARD_ENABLED}
-      - --api.insecure=false
-      - --ping=true
-      - --ping.entrypoint=web
-      - --log.level=${TRAEFIK_LOG_LEVEL}
-      - --accesslog=${TRAEFIK_ACCESSLOG_ENABLED}
+      - --entrypoints.websecure.http.tls.certresolver=cloudflare
+      - --certificatesresolvers.cloudflare.acme.dnschallenge=true
+      - --certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare
+      - --certificatesresolvers.cloudflare.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53
+      - --certificatesresolvers.cloudflare.acme.email=${ACME_EMAIL:-admin@sambhavlabs.com}
+      - --certificatesresolvers.cloudflare.acme.storage=/letsencrypt/acme.json
     ports:
-      - ${PROXY_HTTPS_PUBLISHED_PORT:-8080}:443
-    networks:
-      - zitadel
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - DOCKER_API_VERSION=1.44
+      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN:-}
+      - CLOUDFLARE_DNS_API_TOKEN=${CF_DNS_API_TOKEN:-}
+      - CF_API_EMAIL=${CF_API_EMAIL:-}
+      - CF_API_KEY=${CF_API_KEY:-}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt
+    networks:
+      - zitadel
     depends_on:
       zitadel-api:
         condition: service_healthy
@@ -148,6 +169,7 @@ services:
       - traefik.http.routers.zitadel-api-alias-websecure.rule=Host(`${ZITADEL_DOMAIN}`) && PathPrefix(`/api`)
       - traefik.http.routers.zitadel-api-alias-websecure.entrypoints=websecure
       - traefik.http.routers.zitadel-api-alias-websecure.tls=true
+      - traefik.http.routers.zitadel-api-alias-websecure.tls.certresolver=cloudflare
       - traefik.http.routers.zitadel-api-alias-websecure.middlewares=zitadel-strip-api
       - traefik.http.routers.zitadel-api-alias-websecure.service=zitadel-api
       - traefik.http.routers.zitadel-api-alias-websecure.priority=200
@@ -160,6 +182,7 @@ services:
       - traefik.http.routers.zitadel-canonical-websecure.rule=Host(`${ZITADEL_DOMAIN}`) && !PathPrefix(`/ui/v2/login`) && !PathPrefix(`/api`) && !Path(`/`)
       - traefik.http.routers.zitadel-canonical-websecure.entrypoints=websecure
       - traefik.http.routers.zitadel-canonical-websecure.tls=true
+      - traefik.http.routers.zitadel-canonical-websecure.tls.certresolver=cloudflare
       - traefik.http.routers.zitadel-canonical-websecure.service=zitadel-api
       - traefik.http.routers.zitadel-canonical-websecure.priority=100
 
@@ -201,6 +224,7 @@ services:
       - traefik.http.routers.zitadel-login-websecure.entrypoints=websecure
       - traefik.http.routers.zitadel-login-websecure.service=zitadel-login
       - traefik.http.routers.zitadel-login-websecure.tls=true
+      - traefik.http.routers.zitadel-login-websecure.tls.certresolver=cloudflare
       - traefik.http.routers.zitadel-login-websecure.priority=250
 
       - traefik.http.routers.zitadel-root-web.rule=Host(`${ZITADEL_DOMAIN}`) && Path(`/`)
@@ -214,6 +238,7 @@ services:
       - traefik.http.routers.zitadel-root-websecure.middlewares=zitadel-root-rewrite
       - traefik.http.routers.zitadel-root-websecure.service=zitadel-login
       - traefik.http.routers.zitadel-root-websecure.tls=true
+      - traefik.http.routers.zitadel-root-websecure.tls.certresolver=cloudflare
       - traefik.http.routers.zitadel-root-websecure.priority=400
 
   redis:

@@ -10,8 +10,8 @@ services:
     container_name: traefik-for-zitadel
     restart: unless-stopped
     command:
-      - --log.level=${TRAEFIK_LOG_LEVEL:-DEBUG}
-      - --accesslog=${TRAEFIK_ACCESSLOG_ENABLED:-true}
+      - --log.level=INFO
+      - --accesslog=true
       - --api.insecure=true
       - --api.dashboard=true
       - --ping=true
@@ -29,21 +29,18 @@ services:
       - --certificatesresolvers.cloudflare.acme.dnschallenge=true
       - --certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare
       - --certificatesresolvers.cloudflare.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53
-      - --certificatesresolvers.cloudflare.acme.email=${ACME_EMAIL:-admin@sambhavlabs.com}
+      - --certificatesresolvers.cloudflare.acme.email=${ACME_EMAIL}
       - --certificatesresolvers.cloudflare.acme.storage=/letsencrypt/acme.json
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     env_file:
       - path: .env
         required: false
     environment:
       - DOCKER_API_VERSION=1.44
-      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN:-}
-      - CLOUDFLARE_DNS_API_TOKEN=${CF_DNS_API_TOKEN:-}
-      - CF_API_EMAIL=${CF_API_EMAIL:-}
-      - CF_API_KEY=${CF_API_KEY:-}
+      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./letsencrypt:/letsencrypt
@@ -55,6 +52,7 @@ services:
 
   zitadel-init:
     image: ghcr.io/zitadel/zitadel:${ZITADEL_VERSION}
+    container_name: zitadel-init
     restart: "no"
     command: init
     environment:
@@ -64,33 +62,34 @@ services:
 
   zitadel-setup:
     image: ghcr.io/zitadel/zitadel:${ZITADEL_VERSION}
+    container_name: zitadel-setup
     restart: "no"
     user: "0"
     command: setup --masterkey "${ZITADEL_MASTERKEY}"
     environment:
       <<: *zitadel-db-env
-      ZITADEL_EXTERNALDOMAIN: ${ZITADEL_DOMAIN:-localhost}
-      ZITADEL_EXTERNALPORT: ${ZITADEL_EXTERNALPORT:-8080}
-      ZITADEL_EXTERNALSECURE: ${ZITADEL_EXTERNALSECURE:-true}
+      ZITADEL_EXTERNALDOMAIN: ${ZITADEL_DOMAIN}
+      ZITADEL_EXTERNALPORT: 443
+      ZITADEL_EXTERNALSECURE: "true"
 
-      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME: ${ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME:-admin@localhost}
-      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_ADDRESS: ${ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_ADDRESS:-admin@localhost.com}
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME: ${ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME}
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_ADDRESS: ${ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_ADDRESS}
       ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_VERIFIED: "true"
-      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD: ${ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD:-MyInitialPassw0rd!}
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD: ${ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD}
       ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORDCHANGEREQUIRED: "false"
       ZITADEL_FIRSTINSTANCE_LOGINCLIENTPATPATH: /zitadel/bootstrap/login-client.pat
       ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_USERNAME: login-client
       ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_NAME: Automatically Initialized IAM_LOGIN_CLIENT
-      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_PAT_EXPIRATIONDATE: ${LOGIN_CLIENT_PAT_EXPIRATION}
+      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_PAT_EXPIRATIONDATE: "2035-01-01T00:00:00Z"
 
-      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED: true
-      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_BASEURI: ${ZITADEL_PUBLIC_SCHEME:-https}://${ZITADEL_DOMAIN:-localhost}:${ZITADEL_EXTERNALPORT:-8080}/ui/v2/login/
-      ZITADEL_DEFAULTINSTANCE_OIDC_DEFAULTLOGINURLV2: ${ZITADEL_PUBLIC_SCHEME:-https}://${ZITADEL_DOMAIN:-localhost}:${ZITADEL_EXTERNALPORT:-8080}/ui/v2/login/login?authRequest=
-      ZITADEL_DEFAULTINSTANCE_OIDC_DEFAULTLOGOUTURLV2: ${ZITADEL_PUBLIC_SCHEME:-https}://${ZITADEL_DOMAIN:-localhost}:${ZITADEL_EXTERNALPORT:-8080}/ui/v2/login/logout?post_logout_redirect=
-      ZITADEL_DEFAULTINSTANCE_SAML_DEFAULTLOGINURLV2: ${ZITADEL_PUBLIC_SCHEME:-https}://${ZITADEL_DOMAIN:-localhost}:${ZITADEL_EXTERNALPORT:-8080}/ui/v2/login/login?samlRequest=
-      ZITADEL_OIDC_DEFAULTLOGINURLV2: ${ZITADEL_PUBLIC_SCHEME:-https}://${ZITADEL_DOMAIN:-localhost}:${ZITADEL_EXTERNALPORT:-8080}/ui/v2/login/login?authRequest=
-      ZITADEL_OIDC_DEFAULTLOGOUTURLV2: ${ZITADEL_PUBLIC_SCHEME:-https}://${ZITADEL_DOMAIN:-localhost}:${ZITADEL_EXTERNALPORT:-8080}/ui/v2/login/logout?post_logout_redirect=
-      ZITADEL_SAML_DEFAULTLOGINURLV2: ${ZITADEL_PUBLIC_SCHEME:-https}://${ZITADEL_DOMAIN:-localhost}:${ZITADEL_EXTERNALPORT:-8080}/ui/v2/login/login?samlRequest=
+      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED: "true"
+      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_BASEURI: https://${ZITADEL_DOMAIN}/ui/v2/login/
+      ZITADEL_DEFAULTINSTANCE_OIDC_DEFAULTLOGINURLV2: https://${ZITADEL_DOMAIN}/ui/v2/login/login?authRequest=
+      ZITADEL_DEFAULTINSTANCE_OIDC_DEFAULTLOGOUTURLV2: https://${ZITADEL_DOMAIN}/ui/v2/login/logout?post_logout_redirect=
+      ZITADEL_DEFAULTINSTANCE_SAML_DEFAULTLOGINURLV2: https://${ZITADEL_DOMAIN}/ui/v2/login/login?samlRequest=
+      ZITADEL_OIDC_DEFAULTLOGINURLV2: https://${ZITADEL_DOMAIN}/ui/v2/login/login?authRequest=
+      ZITADEL_OIDC_DEFAULTLOGOUTURLV2: https://${ZITADEL_DOMAIN}/ui/v2/login/logout?post_logout_redirect=
+      ZITADEL_SAML_DEFAULTLOGINURLV2: https://${ZITADEL_DOMAIN}/ui/v2/login/login?samlRequest=
     volumes:
       - zitadel-bootstrap:/zitadel/bootstrap:rw
     networks:
@@ -98,43 +97,44 @@ services:
 
   zitadel-api:
     image: ghcr.io/zitadel/zitadel:${ZITADEL_VERSION}
+    container_name: zitadel-api
     restart: unless-stopped
     user: "0"
     command: start --masterkey "${ZITADEL_MASTERKEY}"
     environment:
       <<: *zitadel-db-env
       ZITADEL_PORT: 8080
-      ZITADEL_EXTERNALDOMAIN: ${ZITADEL_DOMAIN:-localhost}
-      ZITADEL_EXTERNALPORT: ${ZITADEL_EXTERNALPORT:-8080}
-      ZITADEL_EXTERNALSECURE: ${ZITADEL_EXTERNALSECURE:-true}
-      ZITADEL_TLS_ENABLED: false
+      ZITADEL_EXTERNALDOMAIN: ${ZITADEL_DOMAIN}
+      ZITADEL_EXTERNALPORT: 443
+      ZITADEL_EXTERNALSECURE: "true"
+      ZITADEL_TLS_ENABLED: "false"
 
-      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME: ${ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME:-admin@localhost}
-      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_ADDRESS: ${ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_ADDRESS:-admin@localhost.com}
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME: ${ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME}
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_ADDRESS: ${ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_ADDRESS}
       ZITADEL_FIRSTINSTANCE_ORG_HUMAN_EMAIL_VERIFIED: "true"
-      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD: ${ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD:-MyInitialPassw0rd!}
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD: ${ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD}
       ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORDCHANGEREQUIRED: "false"
       ZITADEL_FIRSTINSTANCE_LOGINCLIENTPATPATH: /zitadel/bootstrap/login-client.pat
       ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_USERNAME: login-client
       ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_NAME: Automatically Initialized IAM_LOGIN_CLIENT
-      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_PAT_EXPIRATIONDATE: ${LOGIN_CLIENT_PAT_EXPIRATION}
+      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_PAT_EXPIRATIONDATE: "2035-01-01T00:00:00Z"
 
-      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED: true
-      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_BASEURI: ${ZITADEL_PUBLIC_SCHEME:-https}://${ZITADEL_DOMAIN:-localhost}:${ZITADEL_EXTERNALPORT:-8080}/ui/v2/login/
-      ZITADEL_DEFAULTINSTANCE_OIDC_DEFAULTLOGINURLV2: ${ZITADEL_PUBLIC_SCHEME:-https}://${ZITADEL_DOMAIN:-localhost}:${ZITADEL_EXTERNALPORT:-8080}/ui/v2/login/login?authRequest=
-      ZITADEL_DEFAULTINSTANCE_OIDC_DEFAULTLOGOUTURLV2: ${ZITADEL_PUBLIC_SCHEME:-https}://${ZITADEL_DOMAIN:-localhost}:${ZITADEL_EXTERNALPORT:-8080}/ui/v2/login/logout?post_logout_redirect=
-      ZITADEL_DEFAULTINSTANCE_SAML_DEFAULTLOGINURLV2: ${ZITADEL_PUBLIC_SCHEME:-https}://${ZITADEL_DOMAIN:-localhost}:${ZITADEL_EXTERNALPORT:-8080}/ui/v2/login/login?samlRequest=
-      ZITADEL_OIDC_DEFAULTLOGINURLV2: ${ZITADEL_PUBLIC_SCHEME:-https}://${ZITADEL_DOMAIN:-localhost}:${ZITADEL_EXTERNALPORT:-8080}/ui/v2/login/login?authRequest=
-      ZITADEL_OIDC_DEFAULTLOGOUTURLV2: ${ZITADEL_PUBLIC_SCHEME:-https}://${ZITADEL_DOMAIN:-localhost}:${ZITADEL_EXTERNALPORT:-8080}/ui/v2/login/logout?post_logout_redirect=
-      ZITADEL_SAML_DEFAULTLOGINURLV2: ${ZITADEL_PUBLIC_SCHEME:-https}://${ZITADEL_DOMAIN:-localhost}:${ZITADEL_EXTERNALPORT:-8080}/ui/v2/login/login?samlRequest=
+      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED: "true"
+      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_BASEURI: https://${ZITADEL_DOMAIN}/ui/v2/login/
+      ZITADEL_DEFAULTINSTANCE_OIDC_DEFAULTLOGINURLV2: https://${ZITADEL_DOMAIN}/ui/v2/login/login?authRequest=
+      ZITADEL_DEFAULTINSTANCE_OIDC_DEFAULTLOGOUTURLV2: https://${ZITADEL_DOMAIN}/ui/v2/login/logout?post_logout_redirect=
+      ZITADEL_DEFAULTINSTANCE_SAML_DEFAULTLOGINURLV2: https://${ZITADEL_DOMAIN}/ui/v2/login/login?samlRequest=
+      ZITADEL_OIDC_DEFAULTLOGINURLV2: https://${ZITADEL_DOMAIN}/ui/v2/login/login?authRequest=
+      ZITADEL_OIDC_DEFAULTLOGOUTURLV2: https://${ZITADEL_DOMAIN}/ui/v2/login/logout?post_logout_redirect=
+      ZITADEL_SAML_DEFAULTLOGINURLV2: https://${ZITADEL_DOMAIN}/ui/v2/login/login?samlRequest=
 
-      ZITADEL_LOGSTORE_ACCESS_STDOUT_ENABLED: ${ZITADEL_ACCESS_LOG_STDOUT_ENABLED}
+      ZITADEL_LOGSTORE_ACCESS_STDOUT_ENABLED: "true"
 
-      ZITADEL_CACHES_CONNECTORS_REDIS_ENABLED: ${ZITADEL_CACHES_CONNECTORS_REDIS_ENABLED}
-      ZITADEL_CACHES_CONNECTORS_REDIS_URL: ${ZITADEL_CACHES_CONNECTORS_REDIS_URL}
-      ZITADEL_CACHES_INSTANCE_CONNECTOR: ${ZITADEL_CACHES_INSTANCE_CONNECTOR}
-      ZITADEL_CACHES_MILESTONES_CONNECTOR: ${ZITADEL_CACHES_MILESTONES_CONNECTOR}
-      ZITADEL_CACHES_ORGANIZATION_CONNECTOR: ${ZITADEL_CACHES_ORGANIZATION_CONNECTOR}
+      ZITADEL_CACHES_CONNECTORS_REDIS_ENABLED: "false"
+      ZITADEL_CACHES_CONNECTORS_REDIS_URL: redis://redis:6379
+      ZITADEL_CACHES_INSTANCE_CONNECTOR: ""
+      ZITADEL_CACHES_MILESTONES_CONNECTOR: ""
+      ZITADEL_CACHES_ORGANIZATION_CONNECTOR: ""
       ZITADEL_EVENTSTORE_PUSHTIMEOUT: 300s
 
     healthcheck:
@@ -156,9 +156,6 @@ services:
 
       - traefik.http.middlewares.zitadel-strip-api.stripprefix.prefixes=/api
       - traefik.http.middlewares.zitadel-strip-api.stripprefix.forceSlash=false
-
-      # Note: no dedicated gRPC router needed. All gRPC and Connect-RPC traffic
-      # is handled by the catch-all router below since the backend already uses h2c.
 
       - traefik.http.routers.zitadel-api-alias-web.rule=Host(`${ZITADEL_DOMAIN}`) && PathPrefix(`/api`)
       - traefik.http.routers.zitadel-api-alias-web.entrypoints=web
@@ -188,13 +185,14 @@ services:
 
   zitadel-login:
     image: ghcr.io/zitadel/zitadel-login:${ZITADEL_VERSION}
+    container_name: zitadel-login
     restart: unless-stopped
     environment:
       ZITADEL_API_URL: http://zitadel-api:8080
       ZITADEL_SESSION_COOKIE_SECRET: ${LOGIN_SESSION_COOKIE_SECRET}
       NEXT_PUBLIC_BASE_PATH: /ui/v2/login
       ZITADEL_SERVICE_USER_TOKEN_FILE: /zitadel/bootstrap/login-client.pat
-      CUSTOM_REQUEST_HEADERS: "Host:${ZITADEL_DOMAIN}:${ZITADEL_EXTERNALPORT},X-Forwarded-Proto:${ZITADEL_PUBLIC_SCHEME:-https}"
+      CUSTOM_REQUEST_HEADERS: Host:${ZITADEL_DOMAIN},X-Forwarded-Proto:https
       ZITADEL_TLS_ENABLED: "false"
     volumes:
       - zitadel-bootstrap:/zitadel/bootstrap:ro
@@ -242,7 +240,8 @@ services:
       - traefik.http.routers.zitadel-root-websecure.priority=400
 
   redis:
-    image: ${REDIS_IMAGE}
+    image: redis:7-alpine
+    container_name: zitadel-redis
     restart: unless-stopped
     profiles:
       - cache

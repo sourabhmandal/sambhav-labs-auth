@@ -4,10 +4,9 @@ x-zitadel-db-env: &zitadel-db-env
   ZITADEL_DATABASE_POSTGRES_DSN: ${ZITADEL_DATABASE_POSTGRES_DSN}
 
 services:
-  proxy:
+  traefik4zitadel:
     image: traefik:latest
     pull_policy: always
-    container_name: traefik-for-zitadel
     restart: unless-stopped
     command:
       - --log.level=INFO
@@ -52,7 +51,6 @@ services:
 
   zitadel-init:
     image: ghcr.io/zitadel/zitadel:${ZITADEL_VERSION}
-    container_name: zitadel-init
     restart: "no"
     command: init
     environment:
@@ -62,7 +60,6 @@ services:
 
   zitadel-setup:
     image: ghcr.io/zitadel/zitadel:${ZITADEL_VERSION}
-    container_name: zitadel-setup
     restart: "no"
     user: "0"
     command: setup --masterkey "${ZITADEL_MASTERKEY}"
@@ -97,7 +94,6 @@ services:
 
   zitadel-api:
     image: ghcr.io/zitadel/zitadel:${ZITADEL_VERSION}
-    container_name: zitadel-api
     restart: unless-stopped
     user: "0"
     command: start --masterkey "${ZITADEL_MASTERKEY}"
@@ -185,7 +181,6 @@ services:
 
   zitadel-login:
     image: ghcr.io/zitadel/zitadel-login:${ZITADEL_VERSION}
-    container_name: zitadel-login
     restart: unless-stopped
     environment:
       ZITADEL_API_URL: http://zitadel-api:8080
@@ -239,9 +234,8 @@ services:
       - traefik.http.routers.zitadel-root-websecure.tls.certresolver=cloudflare
       - traefik.http.routers.zitadel-root-websecure.priority=400
 
-  redis:
+  redis4zitadel:
     image: redis:7-alpine
-    container_name: zitadel-redis
     restart: unless-stopped
     profiles:
       - cache

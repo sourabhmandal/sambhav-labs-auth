@@ -90,6 +90,7 @@ services:
       ZITADEL_OIDC_DEFAULTLOGINURLV2: https://${ZITADEL_DOMAIN}/ui/v2/login/login?authRequest=
       ZITADEL_OIDC_DEFAULTLOGOUTURLV2: https://${ZITADEL_DOMAIN}/ui/v2/login/logout?post_logout_redirect=
       ZITADEL_SAML_DEFAULTLOGINURLV2: https://${ZITADEL_DOMAIN}/ui/v2/login/login?samlRequest=
+      ZITADEL_EVENTSTORE_PUSHTIMEOUT: 300s
     volumes:
       - zitadel-bootstrap:/zitadel/bootstrap:rw
     networks:

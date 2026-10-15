@@ -60,15 +60,15 @@ jobs:
           chmod 644 .env
           echo "Generated .env successfully."
 
-      - name: Copy .env to Lightsail via SCP
+      - name: Copy deployment files to Lightsail via SCP
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.LIGHTSAIL_HOST }}
           username: ${{ secrets.LIGHTSAIL_USERNAME || 'ubuntu' }}
           key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
           port: ${{ secrets.LIGHTSAIL_SSH_PORT || 22 }}
-          source: ".env"
-          target: "/tmp"
+          source: ".env,zitadel-compose.yml,scripts,config"
+          target: "/home/${{ secrets.LIGHTSAIL_USERNAME || 'ubuntu' }}/zitadel-deploy"
 
       - name: Execute Remote Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
@@ -78,9 +78,25 @@ jobs:
           key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
           port: ${{ secrets.LIGHTSAIL_SSH_PORT || 22 }}
           script: |
-            if [ -f /tmp/.env ]; then
-              sudo mv -f /tmp/.env /opt/zitadel/.env
-              sudo chown root:root /opt/zitadel/.env
-              sudo chmod 600 /opt/zitadel/.env
+            set -e
+            DEPLOY_SRC="/home/${{ secrets.LIGHTSAIL_USERNAME || 'ubuntu' }}/zitadel-deploy"
+            sudo mkdir -p /opt/zitadel
+
+            if [ -d "$DEPLOY_SRC" ]; then
+              echo "==> Syncing deployment files to /opt/zitadel..."
+              sudo cp -rf "$DEPLOY_SRC"/* /opt/zitadel/ 2>/dev/null || true
+              sudo cp -rf "$DEPLOY_SRC"/.env /opt/zitadel/.env 2>/dev/null || true
+              rm -rf "$DEPLOY_SRC"
             fi
+
+            sudo chown -R root:root /opt/zitadel
+            sudo chmod 600 /opt/zitadel/.env 2>/dev/null || true
+            sudo chmod +x /opt/zitadel/scripts/*.sh
+
+            if ! command -v docker >/dev/null 2>&1; then
+              echo "==> Docker not detected. Bootstrapping server..."
+              sudo bash /opt/zitadel/scripts/bootstrap-server.sh || true
+            fi
+
+            echo "==> Executing deploy.sh..."
             sudo /opt/zitadel/scripts/deploy.sh "${{ github.event.inputs.git_ref }}"

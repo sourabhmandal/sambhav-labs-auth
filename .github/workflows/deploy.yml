@@ -57,7 +57,7 @@ jobs:
                   f.write(f"{k}={shlex.quote(val_str)}\n")
           ' "${RAW_SECRET}"
 
-          chmod 600 .env
+          chmod 644 .env
           echo "Generated .env successfully."
 
       - name: Copy .env to Lightsail via SCP

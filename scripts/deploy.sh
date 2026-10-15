@@ -25,15 +25,19 @@ else
 fi
 
 # 2. Update repository to requested ref
-echo "==> Pulling latest changes from git..."
-git fetch origin
-git checkout "${GIT_REF}"
-if git show-ref --verify --quiet "refs/remotes/origin/${GIT_REF}"; then
-  git merge --ff-only "origin/${GIT_REF}" || true
+if [ -d ".git" ]; then
+  echo "==> Pulling latest changes from git..."
+  git fetch origin || true
+  git checkout "${GIT_REF}" || true
+  if git show-ref --verify --quiet "refs/remotes/origin/${GIT_REF}"; then
+    git merge --ff-only "origin/${GIT_REF}" || true
+  fi
+  CURRENT_SHA=$(git rev-parse HEAD 2>/dev/null || echo "${GIT_REF}")
+  echo "==> Checked out commit: ${CURRENT_SHA}"
+else
+  echo "==> Deploying ref '${GIT_REF}' using packaged files"
+  CURRENT_SHA="${GIT_REF}"
 fi
-
-CURRENT_SHA=$(git rev-parse HEAD)
-echo "==> Checked out commit: ${CURRENT_SHA}"
 
 # 3. Pull / verify secrets in .env
 if [ -f "${SCRIPT_DIR}/pull-secrets.sh" ] && command -v aws >/dev/null 2>&1; then

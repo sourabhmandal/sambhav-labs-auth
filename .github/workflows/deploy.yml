@@ -1,6 +1,12 @@
 name: Deploy Zitadel to Lightsail (SSH)
 
 on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       git_ref:

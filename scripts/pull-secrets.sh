@@ -7,7 +7,7 @@ set -Eeuo pipefail
 # ==============================================================================
 
 SECRET_NAME="${SECRET_NAME:-prod/sambhav-zitadel}"
-REGION="${AWS_REGION:-ap-south-1}"
+REGION="${AWS_REGION:-us-east-1}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_ENV="${TARGET_ENV:-$(cd "${SCRIPT_DIR}/.." && pwd)/.env}"
 

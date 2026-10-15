@@ -28,15 +28,17 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.AWS_REGION || 'ap-south-1' }}
+          aws-region: ${{ vars.AWS_REGION || secrets.AWS_REGION || 'us-east-1' }}
 
       - name: Pull Secret from AWS Secrets Manager (prod/sambhav-zitadel)
         id: fetch_secret
         env:
-          AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+          AWS_REGION: ${{ vars.AWS_REGION || secrets.AWS_REGION || 'us-east-1' }}
           SECRET_NAME: prod/sambhav-zitadel
         run: |
-          echo "Fetching ${SECRET_NAME} from AWS Secrets Manager..."
+          echo "AWS Caller Identity:"
+          aws sts get-caller-identity
+          echo "Fetching ${SECRET_NAME} from AWS Secrets Manager (${AWS_REGION})..."
           RAW_SECRET=$(aws secretsmanager get-secret-value \
             --region "${AWS_REGION}" \
             --secret-id "${SECRET_NAME}" \

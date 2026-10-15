@@ -67,7 +67,7 @@ sudo bash /opt/zitadel/scripts/bootstrap-server.sh
 ---
 
 ### Step 3: Secrets in AWS Secrets Manager
-Ensure the secret named **`prod/sambhav-zitadel`** exists in AWS Secrets Manager (e.g., region `ap-south-1`).
+Ensure the secret named **`prod/sambhav-zitadel`** exists in AWS Secrets Manager (region `us-east-1`).
 
 Key-values expected inside the secret:
 ```json
@@ -103,7 +103,7 @@ In your GitHub repository, go to **Settings** → **Secrets and variables** → 
 #### Repository Variables (Optional):
 | Variable Name | Default |
 |---|---|
-| `AWS_REGION` | `ap-south-1` |
+| `AWS_REGION` | `us-east-1` |
 
 #### Triggering Deployments:
 1. Go to **Actions** → **Deploy Zitadel to Lightsail (SSH)**.
